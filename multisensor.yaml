@@ -1,0 +1,264 @@
+substitutions:
+  devicename: multisensor
+  device_description: multisensor
+  friendly_name: multisensor
+  name: multisensor
+
+esphome:
+  name: multisensor
+  friendly_name: multisensor
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+logger:
+api:
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+captive_portal:
+font:
+  - file: "gfonts://Roboto"
+    id: fonts
+    size: 25
+    glyphs:
+      ['&', '@', '!', ',', '.', '?', '"', '%', '(', ')', '+', '-', '_', ':', '°', '0',
+       '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
+       'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+       'T', 'U', 'V', 'W', 'X', 'Y', 'Z', ' ', 'a', 'b', 'c', 'd', 'e', 'f',
+       'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+       'u', 'v', 'w', 'x', 'y', 'z','å', 'Ä', 'ä', 'Ö', 'ö', 'Ü', 'ü', '/']   
+  - file: "gfonts://Roboto"
+    id: kello
+    size: 35
+  - file: "gfonts://Roboto"
+    id: pvm
+    size: 30
+
+image:
+  - file: mdi:emoticon-cool-outline
+    id: emoticoncooloutline
+    resize: 75x75
+  - file: mdi:emoticon-happy-outline
+    id: emoticonhappy
+    resize: 75x75
+  - file: mdi:emoticon-neutral-outline
+    id: emoticonneutral
+    resize: 75x75
+  - file: mdi:emoticon-sad-outline
+    id: emoticonsad
+    resize: 75x75
+  - file: mdi:emoticon-dead-outline
+    id: emoticondead
+    resize: 75x75
+  - file: mdi:smoke-detector-variant-off
+    id: emoticondetector
+    resize: 75x75
+  
+  - file: mdi:motion-sensor
+    id: liike
+    resize: 75x75
+
+  - file: mdi:motion-sensor-off
+    id: liike_pois
+    resize: 75x75
+
+
+
+
+
+
+  - file: mdi:brightness-7
+    id: kirkkaus
+    resize: 47x47
+  - file: mdi:thermometer
+    id: lampotila
+    resize: 47x47
+  - file: mdi:water-percent
+    id: kosteus
+    resize: 47x47
+  - file: mdi:gauge
+    id: paine
+    resize: 45x45
+
+
+
+
+
+
+color:
+  - id: my_red
+    red: 100%
+    green: 3%
+    blue: 5%
+  - id: my_white
+    red: 100%
+    green: 100%
+    blue: 100%
+  - id: my_green
+    red: 3%
+    green: 100%
+    blue: 5%
+  - id: my_blue
+    red: 3%
+    green: 5%
+    blue: 100%
+time:
+  - platform: homeassistant
+    id: ntp
+
+spi:
+  clk_pin: 6
+  mosi_pin: 5
+i2c:
+  id: i2c_bus0
+  sda: 9
+  scl: 10
+  scan: true
+dallas:
+  - pin: 0
+
+binary_sensor:
+  - platform: status
+    name: "${name} Status"
+    id: espistatus
+  - platform: homeassistant
+    name: "pir"
+    id: pir
+    entity_id: binary_sensor.multisensor_presence
+sensor:
+  - platform: homeassistant
+    name: "lmanlaatuindeksi"
+    entity_id: sensor.supermini_supermini_ilmanlaatuindeksi_2
+    id: ens160_air_quality_index
+  - platform: homeassistant
+    name: "sisa_kirkkaus"
+    entity_id: sensor.supermini_supermini_valoisuus
+    id: sisa_kirkkaus
+  - platform: wifi_signal
+    name: "${name} WiFisingaali"
+    update_interval: 300s
+    id: wifi_signals
+
+  - platform: internal_temperature
+    name: "${name} laitetemp"
+    id: laitetemp
+
+  - platform: uptime
+    name: "${name} Uptime"
+    id: uptime_sec
+
+  - platform: template
+    name: "${name} uptime_paiva"
+    lambda: |-
+      return (id(uptime_sec).state / 60) / 60 / 24;
+    icon: mdi:clock-start
+    id: uptimepaiva
+    unit_of_measurement: days
+  - platform: aht10
+    variant: AHT20
+    temperature:
+      name: "${name}_aht_lampotila"
+      id: aht_lampotila
+    humidity:
+      name: "${name}_aht_kosteus"
+      id: aht_kosteus
+    update_interval: 60s
+  - platform: dallas
+    address: 0x553cc6f648608e28
+    name: "dallas"
+button:
+  - platform: template
+    id: seuraavasivu
+    name: seuraavasivu
+    icon: "mdi:page-next"
+    on_press: 
+      then:
+        - display.page.show_next: display_st7789
+  - platform: template
+    id: edellinensivu
+    name: edellinensivu
+    icon: "mdi:page-previous"
+    on_press: 
+      then:
+        - display.page.show_previous: display_st7789
+text_sensor:
+  - platform: template
+    name: "Ilmanlaatuluokitus"
+    id: ilmanlaatuluokitus
+    lambda: |-
+      switch ( (int) (id(ens160_air_quality_index).state) ) {
+        case 1: return {"loistava"};
+        case 2: return {"hyvä"};
+        case 3: return {"Kohtalainen"};
+        case 4: return {"huono"};
+        case 5: return {"Epäterveellistä"};
+        default: return {"Ei saatavilla"};
+      }
+  - platform: wifi_info
+    ip_address:
+      name: $name ip
+      id: espiip
+  - platform: version
+    name: "$name versio"
+    hide_timestamp: true
+    id: versio
+
+display:
+  - platform: st7789v
+    id: display_st7789
+    model: LILYGO T-Embed 170X320
+    backlight_pin: no
+    cs_pin: 7
+    dc_pin: 20
+    reset_pin: 8
+    rotation: 90
+    update_interval: 1s
+    pages:
+      - id: page1
+        lambda: |-
+          auto blue = Color(0, 0, 255);
+          it.rectangle(0, 0, 95, 170, blue);
+          it.rectangle(100, 0, 125, 95, blue);
+          it.rectangle(230, 0, 85, 170, blue);
+          it.strftime(105, 5, id(pvm), "%d-%m-%y", id(ntp).now());
+          it.strftime(120, 45, id(kello), "%H:%M", id(ntp).now());
+
+          it.image(0, 10, id(lampotila), id(my_red));
+          it.printf(50, 20, id(fonts), TextAlign::TOP_LEFT , "%.0f", round(id(aht_lampotila).state));
+          it.image(0, 65, id(kosteus), id(my_blue));
+          it.printf(50, 75, id(fonts), TextAlign::TOP_LEFT , "%.0f", round(id(aht_kosteus).state));
+          it.image(0, 115, id(paine), id(my_blue));
+          if (id(ilmanlaatuluokitus).state == "loistava") {
+            it.image(230, 10, id(emoticoncooloutline), id(my_green));    
+          } else if (id(ilmanlaatuluokitus).state == "hyvä") {
+            it.image(230, 5, id(emoticonhappy), id(my_green));
+          } else if (id(ilmanlaatuluokitus).state == "Kohtalainen") {
+            it.image(230, 5, id(emoticonneutral), id(my_blue));
+          } else if (id(ilmanlaatuluokitus).state == "huono") {
+            it.image(230, 5, id(emoticonsad), id(my_blue));
+          } else if (id(ilmanlaatuluokitus).state == "Epäterveellistä") {
+            it.image(230, 5, id(emoticondead), id(my_red));
+          } else if (id(ilmanlaatuluokitus).state == "Ei saatavilla") {
+            it.image(230, 5, id(emoticondetector), id(my_red));
+          }
+          it.image(110, 110, id(kirkkaus), id(my_blue));
+          it.printf(157, 127, id(fonts), TextAlign::TOP_LEFT , "%.0f", round(id(sisa_kirkkaus).state));
+
+
+          if (id(pir).state) {
+              it.image(230, 100, id(liike), id(my_green));
+          } else {
+              it.image(230, 100, id(liike_pois), id(my_red));
+          }
+
+output:
+  - platform: ledc
+    pin: 4
+    id: tausta_valo
+light:
+  - platform: monochromatic
+    output: tausta_valo
+    name: "taustavalo"
+    id: taustavalo
+    restore_mode: ALWAYS_ON
